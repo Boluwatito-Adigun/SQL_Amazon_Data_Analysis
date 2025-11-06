@@ -135,5 +135,70 @@ ORDER BY
 6. Least-Selling Categories by State
 Identify the least-selling product category for each state.
 Challenge: Include the total sales for that category within each state.
-*
-/
+*/
+
+
+WITH temp_table_1 AS
+(
+    SELECT  
+        cu.state AS states,
+        ca.category_name AS category_name,
+        ROUND(sum(oi.total_sales)::numeric, 2) AS total_sales,
+        RANK() OVER(PARTITION BY cu.state ORDER BY ROUND(sum(oi.total_sales)::numeric, 2)) AS rank
+    FROM category ca 
+        JOIN products pr
+            ON ca.category_id = pr.category_id
+        JOIN order_items oi
+            ON oi.product_id = pr.product_id
+        JOIN orders o
+            ON oi.order_id = o.order_id
+        JOIN customers cu
+            ON o.customer_id = cu.customer_id
+    GROUP BY
+        cu.state,
+        ca.category_name
+    ORDER BY
+        cu.state,
+        total_sales
+)
+
+SELECT
+    states,
+    category_name,
+    total_sales
+FROM
+    temp_table_1
+WHERE rank = 1;
+
+
+/*
+7. Customer Lifetime Value (CLTV)
+Calculate the total value of orders placed by each customer over their lifetime.
+Challenge: Rank customers based on their CLTV.
+*/
+
+
+SELECT 
+     concat (c.first_name, ' ', c.last_name) AS full_name,
+     COUNT(o.order_id) AS number_of_orders,
+     ROUND (SUM(oi.total_sales)::numeric, 2) AS order_value,
+     DENSE_RANK () OVER(ORDER BY SUM(oi.total_sales) DESC) AS rank
+     
+FROM customers c
+LEFT JOIN orders o 
+    ON c.customer_id = o.customer_id
+    JOIN order_items oi
+    ON o.order_id = oi.order_id
+GROUP BY
+    full_name
+ORDER BY 
+    order_value DESC;
+
+/*
+8. Inventory Stock Alerts
+Query products with stock levels below a certain threshold (e.g., less than 10 units).
+Challenge: Include last restock date and warehouse information.
+*/
+
+
+
