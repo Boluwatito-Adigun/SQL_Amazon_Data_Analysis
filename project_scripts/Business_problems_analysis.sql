@@ -76,3 +76,64 @@ GROUP BY
 HAVING count(o.order_id) > 5
 ORDER BY
     number_of_orders DESC
+
+/*
+4. Monthly Sales Trend
+Query monthly total sales over the past one year.
+Challenge: Display the sales trend, grouping by month, return current_month sale, last month sale!
+*/
+
+SELECT 
+    year,
+    month,
+    total_sales AS current_month_sale,
+    LAG(total_sales, 1) OVER(ORDER BY year, month) AS previous_month_sale
+FROM
+(
+    SELECT 
+        EXTRACT(MONTH FROM o.order_date) AS month,
+        EXTRACT(YEAR FROM o.order_date) AS year,
+        ROUND(SUM(oi.total_sales)::numeric, 2) AS total_sales
+    FROM
+        order_items oi
+    JOIN orders o  
+        ON oi.order_id = o.order_id
+    WHERE o.order_date BETWEEN '2023-07-30' AND '2024-07-30' 
+    GROUP BY
+        month,
+        year
+    ORDER BY
+        year, month
+) AS sub_q1
+
+
+/*
+5. Customers with No Purchases
+Find customers who have registered but never placed an order.
+Challenge: List customer details and the time since their registration.
+*/
+
+SELECT 
+     concat (c.first_name, ' ', c.last_name) AS full_name,
+     c.state,
+     c.address
+     
+FROM    
+    customers c
+LEFT JOIN orders o
+    ON c.customer_id = o.customer_id
+WHERE o.customer_id IS NULL
+GROUP BY    
+    full_name,
+    c.state,
+    c.address
+ORDER BY 
+    full_name
+
+
+/*
+6. Least-Selling Categories by State
+Identify the least-selling product category for each state.
+Challenge: Include the total sales for that category within each state.
+*
+/
