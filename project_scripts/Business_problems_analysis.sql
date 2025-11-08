@@ -196,9 +196,95 @@ ORDER BY
 
 /*
 8. Inventory Stock Alerts
-Query products with stock levels below a certain threshold (e.g., less than 10 units).
+Query products with stock levels less than 10 units
 Challenge: Include last restock date and warehouse information.
 */
+
+SELECT
+    pr.product_name,
+    i.stock,
+    i.last_stock_date
+FROM products pr
+JOIN inventory i 
+    ON pr.product_id = i.product_id
+WHERE i.stock < 10
+ORDER BY
+    i.stock
+
+
+/*
+9. Shipping Delays
+Identify orders where the shipping date is later than 3 days after the order date.
+Challenge: Include customer, order details, and delivery provider.
+*/
+
+
+SELECT 
+    concat (c.first_name, ' ', c.last_name) AS full_name,
+    s.shipping_providers,
+    s.delivery_status,
+    shipping_date - order_date AS time_gap
+
+FROM customers c
+JOIN orders o
+    ON c.customer_id = o.customer_id
+JOIN shipping s
+    ON o.order_id = s.order_id
+WHERE shipping_date - order_date > 3
+
+
+/*
+10. Payment Success Rate 
+Calculate the percentage of successful payments across all orders.
+Challenge: Include breakdowns by payment status (e.g., failed, pending).
+*/
+
+SELECT 
+    payment_status,
+    count(payment_status) AS total_count,
+    ROUND(count(payment_status) / (SELECT count(payment_status) FROM payments)::numeric, 2)* 100 AS percentage
+FROM  payments
+GROUP BY
+    payment_status
+ORDER BY
+    total_count DESC;
+
+/*
+11. Top Performing Sellers
+Find the top 5 sellers based on total sales value.
+Challenge: Include both successful and failed orders, and display their percentage of successful orders.
+*/
+
+SELECT 
+    o.seller_id,
+    s.seller_name,
+    sum(total_sales) AS total_sales,
+    (SELECT 
+        sum(total_sales) 
+     FROM 
+        orders o
+    JOIN order_items oi
+        ON o.order_id = oi.order_id
+    WHERE order_status = 'Completed'
+    GROUP BY
+        o.seller_id
+        LIMIT 5) AS successful_orders
+FROM sellers s  
+    JOIN orders o
+        ON s.seller_id = o.seller_id
+    JOIN order_items oi
+        ON o.order_id = oi.order_id
+GROUP BY
+    o.seller_id,
+    s.seller_name
+ORDER BY
+    total_sales DESC
+LIMIT 5;
+
+
+
+
+
 
 
 
