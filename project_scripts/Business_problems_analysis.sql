@@ -255,36 +255,84 @@ Find the top 5 sellers based on total sales value.
 Challenge: Include both successful and failed orders, and display their percentage of successful orders.
 */
 
-SELECT 
-    o.seller_id,
-    s.seller_name,
-    sum(total_sales) AS total_sales,
-    (SELECT 
-        sum(total_sales) 
+WITH top_sellers 
+AS 
+(
+    SELECT 
+        o.seller_id,
+        s.seller_name,
+        ROUND(sum(total_sales)::numeric, 2) AS total_sales
+    FROM sellers s  
+        JOIN orders o
+            ON s.seller_id = o.seller_id
+        JOIN order_items oi
+            ON o.order_id = oi.order_id
+    GROUP BY
+        o.seller_id,
+        s.seller_name
+    ORDER BY
+        total_sales DESC
+    LIMIT 5
+),
+
+sellers_report
+AS
+( 
+    SELECT 
+        o.seller_id AS seller_id,
+        ts.seller_name AS seller_name,
+        o.order_status,
+        Count(o.order_status) AS total_orders
      FROM 
         orders o
-    JOIN order_items oi
-        ON o.order_id = oi.order_id
-    WHERE order_status = 'Completed'
+    JOIN top_sellers ts
+        ON o.seller_id = ts.seller_id
+    WHERE o.order_status NOT IN ('Inprogress', 'Returned')
     GROUP BY
-        o.seller_id
-        LIMIT 5) AS successful_orders
-FROM sellers s  
-    JOIN orders o
-        ON s.seller_id = o.seller_id
-    JOIN order_items oi
-        ON o.order_id = oi.order_id
+        o.order_status,
+        o.seller_id,
+        ts.seller_name
+)
+
+SELECT 
+    seller_id,
+    seller_name,
+    SUM(CASE WHEN order_status = 'Completed' THEN total_orders ELSE 0 END) AS completed_orders,
+    SUM(CASE WHEN order_status = 'Cancelled' THEN total_orders ELSE 0 END) AS cancelled_orders,
+    SUM(total_orders) AS total_orders,
+    ROUND(SUM(CASE WHEN order_status = 'Completed' THEN total_orders ELSE 0 END)::numeric /
+    SUM(total_orders)::numeric * 100, 2) AS percentage_successful_orders
+
+FROM  sellers_report
 GROUP BY
-    o.seller_id,
-    s.seller_name
+    seller_id,
+    seller_name
+
+/*
+12. Product Profit Margin
+Calculate the profit margin for each product (difference between price and cost of goods sold).
+Challenge: Rank products by their profit margin, showing highest to lowest.
+*/ 
+
+SELECT
+    oi.product_id,
+    pr.product_name,
+    ROUND(SUM(pr.price - pr.cogs * oi.quantity)::numeric, 2) AS total_profit,
+    ROUND(SUM(pr.price - pr.cogs * oi.quantity)::numeric / Sum(oi.total_sales)::numeric * 100, 2) AS profit_margin,
+    DENSE_RANK() 
+    OVER(ORDER BY SUM(pr.price - pr.cogs * oi.quantity)::numeric / SUM(oi.total_sales)::numeric * 100 DESC) AS rank
+FROM products pr
+    JOIN order_items oi
+        ON pr.product_id = oi.product_id
+GROUP BY    
+     oi.product_id,
+     pr.product_name
 ORDER BY
-    total_sales DESC
-LIMIT 5;
+    profit_margin DESC
 
 
-
-
-
-
-
-
+/*
+13. Most Returned Products
+Query the top 10 products by the number of returns.
+Challenge: Display the return rate as a percentage of total units sold for each product.
+*/
