@@ -336,3 +336,93 @@ ORDER BY
 Query the top 10 products by the number of returns.
 Challenge: Display the return rate as a percentage of total units sold for each product.
 */
+
+SELECT
+    pr.product_id,
+    pr.product_name,
+    COUNT(*) AS total_unit_sold,
+    SUM(CASE WHEN o.order_status = 'Returned' THEN 1 ELSE 0 END) AS total_returned,
+    ROUND (SUM(CASE WHEN o.order_status = 'Returned' THEN 1 ELSE 0 END)::numeric / COUNT(*)::numeric * 100, 2) AS return_percentage
+FROM order_items oi
+    JOIN products pr
+        ON oi.product_id = pr.product_id
+    JOIN orders o
+       ON o.order_id = oi.order_id
+GROUP BY
+    pr.product_id,
+    pr.product_name
+ORDER BY
+    total_returned DESC
+LIMIT 10
+
+
+/*
+14. Orders Pending Shipment
+Find orders that have been paid but are still pending shipment.
+Challenge: Include order details, payment date, and customer information.
+*/
+
+SELECT
+    c.customer_id,
+    concat (c.first_name, ' ', c.last_name) AS full_name,
+    c.state,
+    p.payment_date,
+    s.delivery_status
+
+FROM orders o
+    JOIN customers c
+        ON o.customer_id = c.customer_id
+    JOIN payments p
+        ON o.order_id = p.order_id
+    JOIN shipping s
+        ON o.order_id = s.order_id
+WHERE 
+    p.payment_status = 'Payment Successed' AND
+    s.delivery_status = 'Shipped'
+
+
+/*
+15. Inactive Sellers
+Identify sellers who haven’t made any sales in the last 6 months.
+Challenge: Show the last sale date and total sales from those sellers.
+*/
+
+
+WITH sellers_with_no_sales
+AS
+(
+SELECT 
+  *
+FROM
+    sellers
+WHERE seller_id NOT IN (SELECT seller_id FROM orders 
+                            WHERE order_date BETWEEN '2023-07-30' AND '2024-01-30')
+)
+
+SELECT
+    ss.seller_id,
+    ss.seller_name,
+    MAX(o.order_date) AS last_sale_date,
+    ROUND(SUM(oi.total_sales)::NUMERIC, 2) AS total_sale
+
+FROM orders o
+    JOIN order_items oi
+        ON o.order_id = oi.order_id
+    JOIN sellers_with_no_sales ss 
+        ON o.seller_id = ss.seller_id
+GROUP BY 
+    ss.seller_id,
+    ss.seller_name
+
+
+/*
+16. IDENTITY customers into returning or new
+if the customer has done more than 5 return categorize them as returning otherwise new
+Challenge: List customers id, name, total orders, total returns
+*/
+
+
+
+
+
+
