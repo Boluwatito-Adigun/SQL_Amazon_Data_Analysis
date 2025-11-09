@@ -414,15 +414,28 @@ GROUP BY
     ss.seller_id,
     ss.seller_name
 
-
 /*
-16. IDENTITY customers into returning or new
-if the customer has done more than 5 return categorize them as returning otherwise new
+16. Identify customers into returning or new
+if the customer has done more than 5 orders categorize them as returning otherwise new
 Challenge: List customers id, name, total orders, total returns
 */
 
+SELECT 
+    c.customer_id,
+    concat (c.first_name, ' ', c.last_name) AS full_name,
+    COUNT(c.customer_id) AS number_of_orders,
+    CASE 
+        WHEN COUNT(c.customer_id) > 5 THEN 'Returning'
+        WHEN COUNT(c.customer_id) <= 5 THEN 'New'
+    END AS category
+FROM customers c
+    JOIN orders o
+    ON c.customer_id = o. customer_id
+GROUP BY
+    c.customer_id,
+    full_name
+ORDER BY
+    c.customer_id
 
-
-
-
+ 
 
