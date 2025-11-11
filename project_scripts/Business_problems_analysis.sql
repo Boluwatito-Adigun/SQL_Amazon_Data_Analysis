@@ -436,6 +436,63 @@ GROUP BY
     full_name
 ORDER BY
     c.customer_id
+/*
+17. Cross-Sell Opportunities
+Find customers who purchased product A but not product B (e.g., customers who bought AirPods but not AirPods Max).
+Challenge: Suggest cross-sell opportunities by displaying matching product categories.
+*/
 
+SELECT 
+    concat (c.first_name, ' ', c.last_name) AS full_name,
+    pr.product_name,
+    RANK() OVER(PARTITION BY concat (c.first_name, ' ', c.last_name) ORDER BY pr.product_name )
+FROM products pr
+    JOIN order_items oi
+        ON pr.product_id = oi.product_id
+    JOIN orders o
+        ON oi.order_id = o.order_id
+    JOIN customers c 
+        ON o.customer_id = c.customer_id
+
+
+
+/*
+18. Top 5 Customers by Orders in Each State
+Identify the top 5 customers with the highest number of orders for each state.
+Challenge: Include the number of orders and total sales for each customer.
+*/
+
+WITH top_5_customer_by_state 
+AS
+(
+    SELECT
+        c.state,
+        concat (c.first_name, ' ', c.last_name) AS full_name,
+        count(o.order_id) AS number_of_orders,
+        ROUND (SUM(total_sales)::numeric, 2) AS total_sales,
+        DENSE_RANK() OVER(PARTITION BY c.state ORDER BY count(o.order_id) DESC, c.state ) AS rank
+    FROM customers c
+    JOIN orders o
+        ON c.customer_id = o.customer_id
+    JOIN order_items oi
+        ON oi.order_id = o.order_id
+    GROUP BY
+        full_name,
+        c.state
+    ORDER BY 
+        c.state,
+        number_of_orders DESC
+)
+
+SELECT *
+
+FROM top_5_customer_by_state
+WHERE rank <=5
+
+/*
+19. Revenue by Shipping Provider
+Calculate the total revenue handled by each shipping provider.
+Challenge: Include the total number of orders handled and the average delivery time for each provider.
+*/
  
 
