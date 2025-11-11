@@ -495,4 +495,18 @@ Calculate the total revenue handled by each shipping provider.
 Challenge: Include the total number of orders handled and the average delivery time for each provider.
 */
  
+SELECT 
+    s.shipping_providers,
+    COUNT(oi.order_id) AS number_of_orders,
+    ROUND(SUM(oi.total_sales)::numeric, 2) AS total_revenue,
+    AVG((shipping_date - order_date)::numeric) AS avg_delivery_time
+FROM order_items oi 
+JOIN shipping s 
+    ON oi.order_id = s.order_id
+JOIN orders o
+    ON o.order_id = oi.order_id
+GROUP BY  
+    s.shipping_providers
+ORDER BY
+    total_revenue DESC
 
