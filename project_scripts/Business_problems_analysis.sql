@@ -499,7 +499,7 @@ SELECT
     s.shipping_providers,
     COUNT(oi.order_id) AS number_of_orders,
     ROUND(SUM(oi.total_sales)::numeric, 2) AS total_revenue,
-    AVG((shipping_date - order_date)::numeric) AS avg_delivery_time
+    COALESCE (AVG((return_date - shipping_date)::numeric), 0)AS avg_delivery_time
 FROM order_items oi 
 JOIN shipping s 
     ON oi.order_id = s.order_id
