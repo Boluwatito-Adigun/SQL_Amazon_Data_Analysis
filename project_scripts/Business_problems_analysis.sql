@@ -510,3 +510,50 @@ GROUP BY
 ORDER BY
     total_revenue DESC
 
+/*
+20. Top 10 product with highest decreasing revenue ratio compare to last year(2022) and current_year(2023)
+Challenge: Return product_id, product_name, category_name, 2022 revenue and 2023 revenue decrease ratio at end Round the result
+
+Note: Decrease ratio = cr-ls/ls* 100 (cs = current_year ls=last_year)
+*/
+
+
+WITH product_details 
+AS 
+(
+SELECT 
+    pr.product_id AS product_id,
+    c.category_name AS category_name,
+    pr.product_name AS product_name,
+    (SELECT ROUND(SUM(oi.total_sales)::numeric, 2)
+    FROM orders o
+        JOIN order_items oi
+            ON o.order_id = oi.order_id
+    WHERE o.order_date BETWEEN '2022-01-01' and '2022-12-31') AS revenue_2022,
+    (SELECT ROUND(SUM(oi.total_sales)::numeric, 2)
+    FROM orders o
+        JOIN order_items oi
+            ON o.order_id = oi.order_id
+    WHERE o.order_date BETWEEN '2023-01-01' and '2023-12-31') AS revenue_2023
+FROM products pr
+JOIN order_items oi 
+    ON pr.product_id = oi.product_id
+JOIN orders o
+    ON o.order_id = oi.order_id
+JOIN category c 
+    ON c.category_id = pr.category_id
+)
+
+SELECT 
+    product_id,
+    category_name,
+    product_name,
+    ROUND (((revenue_2023 - revenue_2022) / revenue_2022 ) * 100, 2)AS decrease_ratio_2022
+FROM product_details
+ORDER BY 
+    decrease_ratio_2022 DESC;
+
+
+
+
+
