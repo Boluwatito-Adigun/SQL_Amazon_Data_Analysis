@@ -436,28 +436,10 @@ GROUP BY
     full_name
 ORDER BY
     c.customer_id
-/*
-17. Cross-Sell Opportunities
-Find customers who purchased product A but not product B (e.g., customers who bought AirPods but not AirPods Max).
-Challenge: Suggest cross-sell opportunities by displaying matching product categories.
-*/
-
-SELECT 
-    concat (c.first_name, ' ', c.last_name) AS full_name,
-    pr.product_name,
-    RANK() OVER(PARTITION BY concat (c.first_name, ' ', c.last_name) ORDER BY pr.product_name )
-FROM products pr
-    JOIN order_items oi
-        ON pr.product_id = oi.product_id
-    JOIN orders o
-        ON oi.order_id = o.order_id
-    JOIN customers c 
-        ON o.customer_id = c.customer_id
-
 
 
 /*
-18. Top 5 Customers by Orders in Each State
+17. Top 5 Customers by Orders in Each State
 Identify the top 5 customers with the highest number of orders for each state.
 Challenge: Include the number of orders and total sales for each customer.
 */
@@ -490,7 +472,7 @@ FROM top_5_customer_by_state
 WHERE rank <=5
 
 /*
-19. Revenue by Shipping Provider
+18. Revenue by Shipping Provider
 Calculate the total revenue handled by each shipping provider.
 Challenge: Include the total number of orders handled and the average delivery time for each provider.
 */
@@ -511,7 +493,7 @@ ORDER BY
     total_revenue DESC
 
 /*
-20. Top 10 product with highest decreasing revenue ratio compare to last year(2022) and current_year(2023)
+19. Top 10 product with highest decreasing revenue ratio compare to last year(2022) and current_year(2023)
 Challenge: Return product_id, product_name, category_name, 2022 revenue and 2023 revenue decrease ratio at end Round the result
 
 Note: Decrease ratio = cr-ls/ls* 100 (cs = current_year ls=last_year)
