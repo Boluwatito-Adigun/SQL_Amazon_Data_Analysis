@@ -233,3 +233,324 @@ ORDER BY
     full_name
 
 ```
+
+## 6. Least-Selling Categories by State
+
+Shows categories with lowest sales across each state.
+
+### Why It Matters
+
+- Regional demand varies.
+
+- Selling the wrong products in the wrong area leads to waste, slow stock turnover, and lost profits.
+
+
+```sql
+WITH temp_table_1 AS
+(
+    SELECT  
+        cu.state AS states,
+        ca.category_name AS category_name,
+        ROUND(sum(oi.total_sales)::numeric, 2) AS total_sales,
+        RANK() OVER(PARTITION BY cu.state ORDER BY ROUND(sum(oi.total_sales)::numeric, 2)) AS rank
+    FROM category ca 
+        JOIN products pr
+            ON ca.category_id = pr.category_id
+        JOIN order_items oi
+            ON oi.product_id = pr.product_id
+        JOIN orders o
+            ON oi.order_id = o.order_id
+        JOIN customers cu
+            ON o.customer_id = cu.customer_id
+    GROUP BY
+        cu.state,
+        ca.category_name
+    ORDER BY
+        cu.state,
+        total_sales
+)
+
+SELECT
+    states,
+    category_name,
+    total_sales
+FROM
+    temp_table_1
+WHERE rank = 1;
+
+```
+
+## 7. Customer Lifetime Value (CLTV)
+
+Customer Lifetime Value calculates the total monetary value a customer brings to the business over their entire relationship with the brand. Ranking customers by CLTV gives a clear picture of who the most valuable customers are — not just today, but long-term.
+
+
+### Why It Matters
+
+- Shows which customers have the biggest long-term revenue impact.
+
+- Helps calculate cost-effective acquisition and retention strategies.
+
+- Predicts long-term business sustainability.
+
+```sql
+SSELECT 
+     concat (c.first_name, ' ', c.last_name) AS full_name,
+     COUNT(o.order_id) AS number_of_orders,
+     ROUND (SUM(oi.total_sales)::numeric, 2) AS order_value,
+     DENSE_RANK () OVER(ORDER BY SUM(oi.total_sales) DESC) AS rank
+     
+FROM customers c
+LEFT JOIN orders o 
+    ON c.customer_id = o.customer_id
+    JOIN order_items oi
+    ON o.order_id = oi.order_id
+GROUP BY
+    full_name
+ORDER BY 
+    order_value DESC;
+
+```
+
+## 8. Inventory Stock Alerts
+
+Identifies products with low inventory (e.g., less than 10 units).
+
+### Why It Matters
+
+- Prevents stockouts and backorders.
+
+- Helps maintain smooth sales flow and customer satisfaction.
+
+- Reduces emergency restocking costs.
+
+
+```sql
+SELECT
+    pr.product_name,
+    i.stock,
+    i.last_stock_date
+FROM products pr
+JOIN inventory i 
+    ON pr.product_id = i.product_id
+WHERE i.stock < 10
+ORDER BY
+    i.stock
+```
+
+## 9. Shipping Delays
+
+Shows orders where shipping exceeds three days after the order date.
+
+### Why It Matters
+
+- Delays harm customer trust and increase refund/return requests.
+
+- Identifies operational inefficiencies or unreliable delivery partners.
+
+```sql
+SELECT 
+    concat (c.first_name, ' ', c.last_name) AS full_name,
+    s.shipping_providers,
+    s.delivery_status,
+    shipping_date - order_date AS time_gap
+
+FROM customers c
+JOIN orders o
+    ON c.customer_id = o.customer_id
+JOIN shipping s
+    ON o.order_id = s.order_id
+WHERE shipping_date - order_date > 3
+
+```
+
+## 10. Payment Success Rate
+
+Measures percentage of successful vs failed or pending payments.
+
+### Why It Matters
+
+- Failed payments = lost revenue.
+
+- Helps identify technical or customer-side issues.
+
+```sql
+SELECT
+    pr.product_name,
+    i.stock,
+    i.last_stock_date
+FROM products pr
+JOIN inventory i 
+    ON pr.product_id = i.product_id
+WHERE i.stock < 10
+ORDER BY
+    i.stock
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
