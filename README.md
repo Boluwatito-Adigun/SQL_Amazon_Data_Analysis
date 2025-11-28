@@ -375,22 +375,218 @@ Measures percentage of successful vs failed or pending payments.
 - Helps identify technical or customer-side issues.
 
 ```sql
-SELECT
-    pr.product_name,
-    i.stock,
-    i.last_stock_date
-FROM products pr
-JOIN inventory i 
-    ON pr.product_id = i.product_id
-WHERE i.stock < 10
+SELECT 
+    payment_status,
+    count(payment_status) AS total_count,
+    ROUND(count(payment_status) / (SELECT count(payment_status) FROM payments)::numeric, 2)* 100 AS percentage
+FROM  payments
+GROUP BY
+    payment_status
 ORDER BY
-    i.stock
+    total_count DESC;
+```
+
+
+## 11. Top Performing Sellers
+
+Ranks sellers by total sales while also showing their percentage of successful orders.
+
+### Why It Matters
+
+- Helps identify reliable partners vs problematic sellers.
+
+- Ensures marketplace integrity and product availability.
+
+```sql
+WITH top_sellers 
+AS 
+(
+    SELECT 
+        o.seller_id,
+        s.seller_name,
+        ROUND(sum(total_sales)::numeric, 2) AS total_sales
+    FROM sellers s  
+        JOIN orders o
+            ON s.seller_id = o.seller_id
+        JOIN order_items oi
+            ON o.order_id = oi.order_id
+    GROUP BY
+        o.seller_id,
+        s.seller_name
+    ORDER BY
+        total_sales DESC
+    LIMIT 5
+),
+
+sellers_report
+AS
+( 
+    SELECT 
+        o.seller_id AS seller_id,
+        ts.seller_name AS seller_name,
+        o.order_status,
+        Count(o.order_status) AS total_orders
+     FROM 
+        orders o
+    JOIN top_sellers ts
+        ON o.seller_id = ts.seller_id
+    WHERE o.order_status NOT IN ('Inprogress', 'Returned')
+    GROUP BY
+        o.order_status,
+        o.seller_id,
+        ts.seller_name
+)
+
+SELECT 
+    seller_id,
+    seller_name,
+    SUM(CASE WHEN order_status = 'Completed' THEN total_orders ELSE 0 END) AS completed_orders,
+    SUM(CASE WHEN order_status = 'Cancelled' THEN total_orders ELSE 0 END) AS cancelled_orders,
+    SUM(total_orders) AS total_orders,
+    ROUND(SUM(CASE WHEN order_status = 'Completed' THEN total_orders ELSE 0 END)::numeric /
+    SUM(total_orders)::numeric * 100, 2) AS percentage_successful_orders
+
+FROM  sellers_report
+GROUP BY
+    seller_id,
+    seller_name
+
+```
+
+## 12. Product Profit Margin
+
+Shows difference between selling price and cost price.
+
+### Why It Matters
+
+- High sales don’t always equal high profit.
+
+- Businesses need to focus on profitability, not just revenue.
+
+```sql
+SELECT
+    oi.product_id,
+    pr.product_name,
+    ROUND(SUM(pr.price - pr.cogs * oi.quantity)::numeric, 2) AS total_profit,
+    ROUND(SUM(pr.price - pr.cogs * oi.quantity)::numeric / Sum(oi.total_sales)::numeric * 100, 2) AS profit_margin,
+    DENSE_RANK() 
+    OVER(ORDER BY SUM(pr.price - pr.cogs * oi.quantity)::numeric / SUM(oi.total_sales)::numeric * 100 DESC) AS rank
+FROM products pr
+    JOIN order_items oi
+        ON pr.product_id = oi.product_id
+GROUP BY    
+     oi.product_id,
+     pr.product_name
+ORDER BY
+    profit_margin DESC
+
+```
+
+
+## 13. Most Returned Products
+
+Identifies products with highest return count and return rate.
+
+### Why It Matters
+
+- High return rate = financial loss + customer dissatisfaction.
+
+- Helps detect faulty products or misleading descriptions.
+
+
+```sql
+SELECT
+    pr.product_id,
+    pr.product_name,
+    COUNT(*) AS total_unit_sold,
+    SUM(CASE WHEN o.order_status = 'Returned' THEN 1 ELSE 0 END) AS total_returned,
+    ROUND (SUM(CASE WHEN o.order_status = 'Returned' THEN 1 ELSE 0 END)::numeric / COUNT(*)::numeric * 100, 2) AS return_percentage
+FROM order_items oi
+    JOIN products pr
+        ON oi.product_id = pr.product_id
+    JOIN orders o
+       ON o.order_id = oi.order_id
+GROUP BY
+    pr.product_id,
+    pr.product_name
+ORDER BY
+    total_returned DESC
+LIMIT 10
 ```
 
 
 
+## 14. Orders Pending Shipment
+
+Shows orders paid for but not shipped.
+
+### Why It Matters
+
+- Indicates fulfillment bottlenecks.
+
+- Can lead to customer frustration and cancellations.
 
 
+```sql
+SELECT
+    c.customer_id,
+    concat (c.first_name, ' ', c.last_name) AS full_name,
+    c.state,
+    p.payment_date,
+    s.delivery_status
+
+FROM orders o
+    JOIN customers c
+        ON o.customer_id = c.customer_id
+    JOIN payments p
+        ON o.order_id = p.order_id
+    JOIN shipping s
+        ON o.order_id = s.order_id
+WHERE 
+    p.payment_status = 'Payment Successed' AND
+    s.delivery_status = 'Shipped'
+
+```
+
+
+
+## 15. Inactive Sellers
+
+Shows sellers with no sales in the past six months.
+
+### Why It Matters
+
+- Inactive sellers reduce product availability.
+
+- Affects marketplace competitiveness and diversity.
+
+```sql
+WITH sellers_with_no_sales
+AS
+(
+SELECT 
+  *
+FROM
+    sellers
+WHERE seller_id NOT IN (SELECT seller_id FROM orders 
+                            WHERE order_date BETWEEN '2023-07-30' AND '2024-01-30')
+)
+
+SELECT
+    ss.seller_id,
+    ss.seller_name,
+    MAX(o.order_date) AS last_sale_date,
+    ROUND(SUM(oi.total_sales)::NUMERIC, 2) AS total_sale
+
+FROM orders o
+    JOIN order_items oi
+        ON o.order_id = oi.order_id
+    JOIN sellers_with_no_sales ss 
+        ON o.seller_id = ss.seller_id
+GROUP BY 
+    ss.seller_id,
+    ss.seller_name
+```
 
 
 
