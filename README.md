@@ -585,7 +585,7 @@ FROM orders o
         ON o.seller_id = ss.seller_id
 GROUP BY 
     ss.seller_id,
-    ss.seller_name
+    ss.seller_na
 ```
 
 
