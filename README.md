@@ -585,12 +585,156 @@ FROM orders o
         ON o.seller_id = ss.seller_id
 GROUP BY 
     ss.seller_id,
-    ss.seller_na
+    ss.seller_name
 ```
 
+## 16. Identify Customers as Returning or New
+
+Classifies customers based on number of returns.
+
+### Why It Matters
+
+- Helps understand customer loyalty vs dissatisfaction.
+
+- Frequent returners may indicate purchasing issues.
 
 
+```sql
+SELECT 
+    c.customer_id,
+    concat (c.first_name, ' ', c.last_name) AS full_name,
+    COUNT(c.customer_id) AS number_of_orders,
+    CASE 
+        WHEN COUNT(c.customer_id) > 5 THEN 'Returning'
+        WHEN COUNT(c.customer_id) <= 5 THEN 'New'
+    END AS category
+FROM customers c
+    JOIN orders o
+    ON c.customer_id = o. customer_id
+GROUP BY
+    c.customer_id,
+    full_name
+ORDER BY
+    c.customer_id
 
+```
+
+## 17. Top 5 Customers by Orders in Each State
+
+Ranks the highest-order customers by state.
+
+### Why It Matters
+
+- State-level segmentation helps focus on regional high-value users.
+
+- Helps identify geographic revenue hotspots.
+
+```sql
+WITH top_5_customer_by_state 
+AS
+(
+    SELECT
+        c.state,
+        concat (c.first_name, ' ', c.last_name) AS full_name,
+        count(o.order_id) AS number_of_orders,
+        ROUND (SUM(total_sales)::numeric, 2) AS total_sales,
+        DENSE_RANK() OVER(PARTITION BY c.state ORDER BY count(o.order_id) DESC, c.state ) AS rank
+    FROM customers c
+    JOIN orders o
+        ON c.customer_id = o.customer_id
+    JOIN order_items oi
+        ON oi.order_id = o.order_id
+    GROUP BY
+        full_name,
+        c.state
+    ORDER BY 
+        c.state,
+        number_of_orders DESC
+)
+
+SELECT *
+
+FROM top_5_customer_by_state
+WHERE rank <=5
+
+```
+
+## 18. Revenue by Shipping Provider
+
+Shows revenue and order volume handled by each shipping partner + average delivery time.
+
+### Why It Matters
+
+- Helps evaluate which delivery providers perform best.
+
+- Reveals cost vs reliability trade-offs.
+
+```sql
+SELECT 
+    s.shipping_providers,
+    COUNT(oi.order_id) AS number_of_orders,
+    ROUND(SUM(oi.total_sales)::numeric, 2) AS total_revenue,
+    COALESCE (AVG((return_date - shipping_date)::numeric), 0)AS avg_delivery_time
+FROM order_items oi 
+JOIN shipping s 
+    ON oi.order_id = s.order_id
+JOIN orders o
+    ON o.order_id = oi.order_id
+GROUP BY  
+    s.shipping_providers
+ORDER BY
+    total_revenue DESC
+
+```
+
+## 19. Products With Highest Decrease in Revenue (2022 vs 2023)
+
+Compares revenue decline of products year over year.
+
+### Why It Matters
+
+- Helps identify products losing popularity.
+
+- Prevents revenue erosion by catching problems early.
+
+```sql
+WITH product_details 
+AS 
+(
+SELECT 
+    pr.product_id AS product_id,
+    c.category_name AS category_name,
+    pr.product_name AS product_name,
+    (SELECT ROUND(SUM(oi.total_sales)::numeric, 2)
+    FROM orders o
+        JOIN order_items oi
+            ON o.order_id = oi.order_id
+    WHERE o.order_date BETWEEN '2022-01-01' and '2022-12-31') AS revenue_2022,
+    (SELECT ROUND(SUM(oi.total_sales)::numeric, 2)
+    FROM orders o
+        JOIN order_items oi
+            ON o.order_id = oi.order_id
+    WHERE o.order_date BETWEEN '2023-01-01' and '2023-12-31') AS revenue_2023
+FROM products pr
+JOIN order_items oi 
+    ON pr.product_id = oi.product_id
+JOIN orders o
+    ON o.order_id = oi.order_id
+JOIN category c 
+    ON c.category_id = pr.category_id
+)
+
+SELECT 
+    product_id,
+    category_name,
+    product_name,
+    ROUND (((revenue_2023 - revenue_2022) / revenue_2022 ) * 100, 2)AS decrease_ratio_2022
+FROM product_details
+ORDER BY 
+    decrease_ratio_2022 DESC;
+
+
+```
 
 
 
